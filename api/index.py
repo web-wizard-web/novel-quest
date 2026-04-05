@@ -124,16 +124,31 @@ def chat_with_ai():
         context = str(data.get('context', ''))
         mode = data.get('mode', 'strict')
 
+        is_strict_mode = str(mode).lower() == "strict"
+        system_instruction = (
+            f"{sys_msg} Answer strictly based on the manuscript provided."
+            if is_strict_mode
+            else (
+                f"{sys_msg} You may use general knowledge. "
+                "If manuscript context is provided, use it when relevant."
+            )
+        )
+        user_content = (
+            f"MANUSCRIPT:\n{context[:5000]}\n\nQUESTION: {user_q}"
+            if context.strip()
+            else f"QUESTION: {user_q}"
+        )
+
         payload = {
             "model": "llama-3.3-70b-versatile",
             "messages": [
                 {
                     "role": "system",
-                    "content": f"{sys_msg} Answer strictly based on the manuscript provided."
+                    "content": system_instruction
                 },
                 {
                     "role": "user",
-                    "content": f"MANUSCRIPT:\n{context[:5000]}\n\nQUESTION: {user_q}"
+                    "content": user_content
                 }
             ],
             "temperature": 0.6,

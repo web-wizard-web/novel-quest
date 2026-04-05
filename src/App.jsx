@@ -79,6 +79,24 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+const getFirebaseConfigIssues = (config) => {
+  const requiredEntries = [
+    ["VITE_FIREBASE_API_KEY", config.apiKey],
+    ["VITE_FIREBASE_AUTH_DOMAIN", config.authDomain],
+    ["VITE_FIREBASE_PROJECT_ID", config.projectId],
+    ["VITE_FIREBASE_STORAGE_BUCKET", config.storageBucket],
+    ["VITE_FIREBASE_MESSAGING_SENDER_ID", config.messagingSenderId],
+    ["VITE_FIREBASE_APP_ID", config.appId],
+  ];
+
+  return requiredEntries
+    .filter(([, value]) => !String(value || "").trim())
+    .map(([key]) => key);
+};
+
+const firebaseConfigIssues = getFirebaseConfigIssues(firebaseConfig);
+const isFirebaseConfigured = firebaseConfigIssues.length === 0;
+
 const appId = String(import.meta.env.VITE_APP_ID || "novel-quest-v1").replace(
   /[^a-zA-Z0-9]/g,
   "_",
@@ -106,6 +124,16 @@ const isFirestoreConnectivityError = (error) => {
 const getFriendlyAuthError = (error) => {
   if (error?.message === "USERNAME_TAKEN") {
     return "Username already taken. Try another.";
+  }
+
+  if (error?.code === "auth/api-key-not-valid") {
+    return "Firebase API key is invalid for this build. Update the Vite Firebase env vars, then restart or redeploy so the new key is bundled.";
+  }
+  if (error?.code === "auth/invalid-api-key") {
+    return "Firebase API key is missing or invalid. Check your Vite Firebase env vars and rebuild the app.";
+  }
+  if (error?.code === "auth/popup-blocked") {
+    return "Google sign-in popup was blocked. Allow popups for this site and try again after fixing any Firebase config errors.";
   }
 
   if (isFirestoreConnectivityError(error)) {
@@ -348,6 +376,18 @@ export default function App() {
   // --- AUTH INITIALIZATION ---
   useEffect(() => {
     const initAuth = async () => {
+      if (!isFirebaseConfigured) {
+        console.error(
+          "Firebase configuration is incomplete. Missing:",
+          firebaseConfigIssues,
+        );
+        setAuthError(
+          `Firebase is not configured. Missing: ${firebaseConfigIssues.join(", ")}`,
+        );
+        setIsAuthLoading(false);
+        return;
+      }
+
       try {
         if (
           typeof __initial_auth_token !== "undefined" &&
@@ -359,6 +399,8 @@ export default function App() {
         }
       } catch (err) {
         console.error("Authentication Error:", err);
+        setAuthError(getFriendlyAuthError(err));
+        setIsAuthLoading(false);
       }
     };
     initAuth();
@@ -859,7 +901,9 @@ export default function App() {
   // --- SMART CHAT HANDLER ---
   const handleChat = async () => {
     if (!userInput.trim() || isAiLoading || !user) return;
-    if (!text.trim()) return notify("Load a manuscript first", "info");
+    if (chatMode === "strict" && !text.trim()) {
+      return notify("Load a manuscript first for Strict mode", "info");
+    }
     const q = userInput.trim();
     setUserInput("");
     setChatHistory((prev) => [...prev, { role: "user", content: q }]);
@@ -880,7 +924,9 @@ export default function App() {
     if (social.some((s) => lowerQ.startsWith(s))) {
       const reply = lowerQ.includes("thank")
         ? "You're very welcome!"
-        : "Hello! I'm ready. Ask me anything about the manuscript!";
+        : chatMode === "strict"
+          ? "Hello! I'm ready. Ask me anything about the manuscript!"
+          : "Hello! I'm ready. Ask me anything!";
       setChatHistory((prev) => [
         ...prev,
         { role: "bot", content: reply, thought: "Handled locally." },
@@ -1217,6 +1263,12 @@ export default function App() {
     if (isSigningIn) return;
     setIsSigningIn(true);
     try {
+      if (!isFirebaseConfigured) {
+        throw new Error(
+          `Firebase is not configured. Missing: ${firebaseConfigIssues.join(", ")}`,
+        );
+      }
+
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
@@ -1238,7 +1290,9 @@ export default function App() {
       trackEvent("signin", { method: "google" });
     } catch (err) {
       console.error("Google sign-in error:", err);
-      notify("Authentication failed", "error");
+      const message = getFriendlyAuthError(err);
+      setAuthError(message);
+      notify(message, "error");
     } finally {
       setIsSigningIn(false);
     }

@@ -61,6 +61,7 @@ Notes:
 - `GROQ_API_KEY` is required for `/api/chat` and `/api/ocr`.
 - All `VITE_FIREBASE_*` variables are required for auth and Firestore sync.
 - `VITE_APP_ID` is used to namespace app data.
+- Vite embeds `VITE_*` variables at build time. If you change Firebase keys, restart `npm run dev` locally and redeploy production so old bundles do not keep using stale values.
 
 ## Local Development
 
