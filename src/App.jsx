@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+﻿import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   BookOpen,
   MessageSquare,
@@ -866,7 +866,9 @@ export default function App() {
     // For image imports, use larger context (up to 8000 chars)
     // For PDFs/regular docs, default to current page only
     const isShortDoc = pages.length === 1;
-    const context = isShortDoc ? text.substring(0, 8000) : pages[safePageIndex] || "";
+    const context = isShortDoc
+      ? text.substring(0, 8000)
+      : pages[safePageIndex] || "";
     const summaryWindowStart = Math.max(0, safePageIndex - 4);
     const summaryWindowPages = isShortDoc
       ? []
@@ -876,7 +878,9 @@ export default function App() {
             pageNumber: summaryWindowStart + idx + 1,
             text: String(pageText || "").trim(),
           }));
-    const nonEmptySummaryPages = summaryWindowPages.filter((p) => p.text.length > 0);
+    const nonEmptySummaryPages = summaryWindowPages.filter(
+      (p) => p.text.length > 0,
+    );
     const effectiveSummaryPageNumber = isShortDoc
       ? 1
       : (
@@ -1544,7 +1548,9 @@ export default function App() {
                         >
                           <div className="flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 text-sm font-black text-white shadow-lg shadow-sky-500/25 shrink-0">
-                              {(user?.displayName || user?.email || "?")[0].toUpperCase()}
+                              {(user?.displayName ||
+                                user?.email ||
+                                "?")[0].toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-[11px] font-black uppercase tracking-wide text-[#31406f] dark:text-[#eef2ff]">
@@ -1777,7 +1783,7 @@ export default function App() {
                             ))
                           )}
                         </div>
-                        </div>
+                      </div>
                     </>
                   )}
                 </div>
